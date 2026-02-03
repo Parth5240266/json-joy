@@ -10,6 +10,7 @@ import ViewerPage from "./pages/ViewerPage";
 import DiffPage from "./pages/DiffPage";
 import TablePage from "./pages/TablePage";
 import ConverterPage from "./pages/ConverterPage";
+import CodeGeneratorPage from "./pages/CodeGeneratorPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/diff" element={<DiffPage />} />
           <Route path="/table" element={<TablePage />} />
           <Route path="/converter" element={<ConverterPage />} />
+          <Route path="/code-generator" element={<CodeGeneratorPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

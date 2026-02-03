@@ -9,6 +9,7 @@ interface JsonEditorProps {
   height?: string;
   theme?: 'light' | 'dark';
   placeholder?: string;
+  language?: 'json' | 'typescript' | 'javascript';
 }
 
 export function JsonEditor({
@@ -17,6 +18,7 @@ export function JsonEditor({
   readOnly = false,
   height = '100%',
   theme = 'dark',
+  language = 'json',
 }: JsonEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
 
@@ -35,7 +37,7 @@ export function JsonEditor({
     <div className="h-full w-full overflow-hidden rounded-lg border border-border bg-editor-bg">
       <Editor
         height={height}
-        language="json"
+        language={language}
         value={value}
         onChange={handleChange}
         onMount={handleEditorMount}
