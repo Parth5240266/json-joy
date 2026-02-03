@@ -162,7 +162,7 @@ export default function HomePage() {
               className="text-center mb-12"
             >
               <h2 className="text-3xl font-bold text-foreground mb-4">
-                All the JSON Tools You Need
+                All the JSONJoy Tools You Need
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 A comprehensive toolkit for working with JSON data. Each tool is designed
@@ -241,13 +241,15 @@ export default function HomePage() {
         <footer className="py-8 px-6 border-t border-border">
           <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                <Braces className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="font-semibold">JSON Tools</span>
+              <img 
+                src="/JsonJoy_logo.png" 
+                alt="JSONJoy Logo" 
+                className="h-8 w-8 object-contain"
+              />
+              <span className="font-semibold">JSONJoy</span>
             </div>
             <p className="text-sm text-muted-foreground text-center">
-              Built with React, Monaco Editor, and Tailwind CSS. No data is ever sent to a server.
+              Your all-in-one JSON toolkit • All rights reserved
             </p>
           </div>
         </footer>
