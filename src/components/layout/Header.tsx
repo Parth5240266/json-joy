@@ -11,6 +11,7 @@ import {
   GitCompare,
   Table,
   FileCode,
+  Code,
   Menu,
   X,
   Home,
@@ -25,6 +26,7 @@ const tools = [
   { path: '/diff', label: 'Diff', icon: GitCompare },
   { path: '/table', label: 'Table', icon: Table },
   { path: '/converter', label: 'Converter', icon: FileCode },
+  { path: '/code-generator', label: 'Code Gen', icon: Code },
 ];
 
 export function Header() {

@@ -9,6 +9,7 @@ import {
   GitCompare,
   Table,
   FileCode,
+  Code,
   ArrowRight,
   Zap,
   Shield,
@@ -57,6 +58,13 @@ const tools = [
     description: 'Convert JSON to CSV or XML format for easy data exchange',
     icon: FileCode,
     gradient: 'from-indigo-500 to-purple-500',
+  },
+  {
+    path: '/code-generator',
+    label: 'Code Generator',
+    description: 'Fetch JSON from URL and generate TypeScript interfaces or JavaScript code',
+    icon: Code,
+    gradient: 'from-rose-500 to-pink-500',
   },
 ];
 
