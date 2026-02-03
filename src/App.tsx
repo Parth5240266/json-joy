@@ -3,7 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import HomePage from "./pages/HomePage";
+import FormatterPage from "./pages/FormatterPage";
+import ValidatorPage from "./pages/ValidatorPage";
+import ViewerPage from "./pages/ViewerPage";
+import DiffPage from "./pages/DiffPage";
+import TablePage from "./pages/TablePage";
+import ConverterPage from "./pages/ConverterPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -15,7 +21,13 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/formatter" element={<FormatterPage />} />
+          <Route path="/validator" element={<ValidatorPage />} />
+          <Route path="/viewer" element={<ViewerPage />} />
+          <Route path="/diff" element={<DiffPage />} />
+          <Route path="/table" element={<TablePage />} />
+          <Route path="/converter" element={<ConverterPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
