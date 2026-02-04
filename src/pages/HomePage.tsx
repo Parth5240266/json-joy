@@ -14,6 +14,7 @@ import {
   Zap,
   Shield,
   Eye,
+  ShieldCheck,
 } from 'lucide-react';
 
 const tools = [
@@ -65,6 +66,13 @@ const tools = [
     description: 'Fetch JSON from URL and generate TypeScript interfaces or JavaScript code',
     icon: Code,
     gradient: 'from-rose-500 to-pink-500',
+  },
+  {
+    path: '/yup-schema',
+    label: 'Yup Schema',
+    description: 'Generate Yup schema from JSON',
+    icon: ShieldCheck,
+    gradient: 'from-green-500 to-emerald-500',
   },
 ];
 
