@@ -29,7 +29,7 @@ const tools = [
   { path: '/code-generator', label: 'Code Gen', icon: Code },
 ];
 
-export function Header() {
+function Header() {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -40,10 +40,12 @@ export function Header() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 font-semibold text-lg">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Braces className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="hidden sm:inline">JSON Tools</span>
+            <img 
+              src="/JsonJoy_logo.png" 
+              alt="JSONJoy Logo" 
+              className="h-8 w-8 object-contain"
+            />
+            <span className="hidden sm:inline">JSONJoy</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -158,3 +160,6 @@ export function Header() {
     </header>
   );
 }
+
+export { Header };
+export default Header;
