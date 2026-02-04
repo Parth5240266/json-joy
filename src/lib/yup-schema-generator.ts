@@ -144,9 +144,25 @@ function inferValidationsFromValue(value: unknown, kind: FieldKind): FieldValida
     };
   }
   if (kind === 'date') {
-    return { kind: 'date', v: { required: value !== null && value !== undefined } };
+    return { 
+      kind: 'date', 
+      v: { 
+        required: value !== null && value !== undefined,
+        min: undefined,
+        max: undefined,
+      } 
+    };
   }
-  return { kind: 'string', v: { required: false } };
+  return { 
+    kind: 'string', 
+    v: { 
+      required: false,
+      minLength: undefined,
+      maxLength: undefined,
+      email: false,
+      url: false,
+    } 
+  };
 }
 
 /** Merge validations from multiple samples - only sets required if present in all samples */
@@ -464,8 +480,16 @@ export function generateYupSchema(
       const v = n.validations.kind === 'date' ? n.validations.v : null;
       let chain = 'yup.date()';
       if (v?.required) chain += '\n  .required()';
-      if (v?.min) chain += `\n  .min(new Date('${v.min}'))`;
-      if (v?.max) chain += `\n  .max(new Date('${v.max}'))`;
+      if (v?.min) {
+        // Extract date part only (YYYY-MM-DD) for cleaner schema
+        const dateStr = v.min.split('T')[0];
+        chain += `\n  .min(new Date('${dateStr}T00:00:00Z'))`;
+      }
+      if (v?.max) {
+        // Extract date part only (YYYY-MM-DD) for cleaner schema
+        const dateStr = v.max.split('T')[0];
+        chain += `\n  .max(new Date('${dateStr}T23:59:59Z'))`;
+      }
       return indentChain(chain, idtInner);
     }
     if (n.kind === 'object') {

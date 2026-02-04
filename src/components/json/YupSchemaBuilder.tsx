@@ -543,11 +543,11 @@ function ValidationEditor({
             <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
               <span className="text-muted-foreground">min:</span>
               <Input
-                type="datetime-local"
-                className="h-5 w-32 text-[11px] px-1 py-0 border-0 bg-background/50"
-                value={v.min ? new Date(v.min).toISOString().slice(0, 16) : ''}
+                type="date"
+                className="h-5 w-28 text-[11px] px-1 py-0 border-0 bg-background/50"
+                value={v.min ? new Date(v.min).toISOString().slice(0, 10) : ''}
                 onChange={(e) => {
-                  const val = e.target.value ? new Date(e.target.value).toISOString() : undefined;
+                  const val = e.target.value ? new Date(e.target.value + 'T00:00:00Z').toISOString() : undefined;
                   onUpdate((n) => {
                     if (n.validations.kind === 'date') n.validations.v.min = val;
                   });
@@ -569,11 +569,11 @@ function ValidationEditor({
             <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
               <span className="text-muted-foreground">max:</span>
               <Input
-                type="datetime-local"
-                className="h-5 w-32 text-[11px] px-1 py-0 border-0 bg-background/50"
-                value={v.max ? new Date(v.max).toISOString().slice(0, 16) : ''}
+                type="date"
+                className="h-5 w-28 text-[11px] px-1 py-0 border-0 bg-background/50"
+                value={v.max ? new Date(v.max).toISOString().slice(0, 10) : ''}
                 onChange={(e) => {
-                  const val = e.target.value ? new Date(e.target.value).toISOString() : undefined;
+                  const val = e.target.value ? new Date(e.target.value + 'T00:00:00Z').toISOString() : undefined;
                   onUpdate((n) => {
                     if (n.validations.kind === 'date') n.validations.v.max = val;
                   });
