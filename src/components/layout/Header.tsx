@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Home,
+  ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +28,7 @@ const tools = [
   { path: '/table', label: 'Table', icon: Table },
   { path: '/converter', label: 'Converter', icon: FileCode },
   { path: '/code-generator', label: 'Code Gen', icon: Code },
+  { path: '/yup-schema', label: 'Yup Schema', icon: ShieldCheck },
 ];
 
 function Header() {

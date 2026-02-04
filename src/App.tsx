@@ -11,6 +11,7 @@ import DiffPage from "./pages/DiffPage";
 import TablePage from "./pages/TablePage";
 import ConverterPage from "./pages/ConverterPage";
 import CodeGeneratorPage from "./pages/CodeGeneratorPage";
+import YupSchemaPage from "./pages/YupSchemaPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/table" element={<TablePage />} />
           <Route path="/converter" element={<ConverterPage />} />
           <Route path="/code-generator" element={<CodeGeneratorPage />} />
+          <Route path="/yup-schema" element={<YupSchemaPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
