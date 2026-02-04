@@ -142,7 +142,7 @@ export default function CodeGeneratorPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [url, method, headers]);
+  }, [url, method, headers, requestBody, showBodyEditor]);
 
   const handleGenerateTypeScript = useCallback(() => {
     const validation = validateJSON(input);
