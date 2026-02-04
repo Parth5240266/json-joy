@@ -340,7 +340,7 @@ export default function CodeGeneratorPage() {
                   type="text"
                   placeholder="Root"
                   value={interfaceName}
-                  onChange={(e) => setInterfaceName(e.target.value || 'Root')}
+                  onChange={(e) => setInterfaceName(e.target.value)}
                   className="h-9 w-32"
                 />
               </div>
