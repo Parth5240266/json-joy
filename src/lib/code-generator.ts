@@ -6,10 +6,19 @@ export interface FetchResult {
   error?: string;
 }
 
+export interface FetchOptions {
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+}
+
 /**
- * Fetch JSON from a URL (client-side)
+ * Fetch JSON from a URL (client-side) with custom headers
  */
-export async function fetchJsonFromUrl(url: string): Promise<FetchResult> {
+export async function fetchJsonFromUrl(
+  url: string,
+  options: FetchOptions = {}
+): Promise<FetchResult> {
   try {
     // Validate URL
     let formattedUrl = url.trim();
@@ -19,12 +28,25 @@ export async function fetchJsonFromUrl(url: string): Promise<FetchResult> {
 
     new URL(formattedUrl); // Validate URL format
 
-    const response = await fetch(formattedUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+    const { method = 'GET', headers = {}, body } = options;
+
+    // Merge default headers with custom headers
+    const requestHeaders: Record<string, string> = {
+      'Accept': 'application/json',
+      ...headers,
+    };
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers: requestHeaders,
+    };
+
+    // Add body for non-GET requests
+    if (body && method !== 'GET') {
+      fetchOptions.body = body;
+    }
+
+    const response = await fetch(formattedUrl, fetchOptions);
 
     if (!response.ok) {
       return {

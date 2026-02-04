@@ -4,6 +4,8 @@ import { JsonEditor } from '@/components/json/JsonEditor';
 import { ToolLayout } from '@/components/json/ToolLayout';
 import { Toolbar, ToolbarButton } from '@/components/json/Toolbar';
 import { StatusMessage } from '@/components/json/StatusMessage';
+import { HeadersEditor, HeaderItem } from '@/components/json/HeadersEditor';
+import { CurlPasteDialog } from '@/components/json/CurlPasteDialog';
 import { useTheme } from '@/hooks/use-theme';
 import { useDebounce } from '@/hooks/use-debounce';
 import {
@@ -12,9 +14,18 @@ import {
   downloadFile,
 } from '@/lib/json-utils';
 import { jsonToTypeScript, jsonToJavaScript, fetchJsonFromUrl } from '@/lib/code-generator';
+import { ParsedCurl } from '@/lib/curl-parser';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { FileType, Code, Globe, Loader2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { FileType, Code, Globe, Loader2, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const SAMPLE_JSON = `{
   "id": 1,
@@ -30,6 +41,7 @@ const SAMPLE_JSON = `{
 }`;
 
 type OutputType = 'typescript' | 'javascript' | null;
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 export default function CodeGeneratorPage() {
   const { theme } = useTheme();
@@ -39,8 +51,12 @@ export default function CodeGeneratorPage() {
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState('');
+  const [method, setMethod] = useState<HttpMethod>('GET');
+  const [headers, setHeaders] = useState<HeaderItem[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [interfaceName, setInterfaceName] = useState('Root');
+  const [curlDialogOpen, setCurlDialogOpen] = useState(false);
+  const [headersOpen, setHeadersOpen] = useState(false);
 
   const debouncedInput = useDebounce(input, 300);
 
@@ -59,6 +75,25 @@ export default function CodeGeneratorPage() {
     }
   }, [debouncedInput]);
 
+  const handleCurlImport = useCallback((parsed: ParsedCurl) => {
+    setUrl(parsed.url);
+    setMethod((parsed.method as HttpMethod) || 'GET');
+    
+    // Convert parsed headers to HeaderItem format
+    const newHeaders: HeaderItem[] = Object.entries(parsed.headers).map(([key, value]) => ({
+      id: crypto.randomUUID(),
+      key,
+      value,
+      enabled: true,
+    }));
+    setHeaders(newHeaders);
+    
+    // Auto-expand headers section if there are headers
+    if (newHeaders.length > 0) {
+      setHeadersOpen(true);
+    }
+  }, []);
+
   const handleFetchUrl = useCallback(async () => {
     if (!url.trim()) {
       setError('Please enter a URL');
@@ -69,7 +104,19 @@ export default function CodeGeneratorPage() {
     setError(null);
 
     try {
-      const result = await fetchJsonFromUrl(url);
+      // Build headers object from enabled headers
+      const requestHeaders: Record<string, string> = {};
+      headers
+        .filter((h) => h.enabled && h.key.trim())
+        .forEach((h) => {
+          requestHeaders[h.key.trim()] = h.value;
+        });
+
+      const result = await fetchJsonFromUrl(url, {
+        method,
+        headers: requestHeaders,
+      });
+
       if (result.success && result.data) {
         setInput(JSON.stringify(result.data, null, 2));
         setOutput('');
@@ -83,7 +130,7 @@ export default function CodeGeneratorPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [url]);
+  }, [url, method, headers]);
 
   const handleGenerateTypeScript = useCallback(() => {
     const validation = validateJSON(input);
@@ -141,15 +188,30 @@ export default function CodeGeneratorPage() {
     downloadFile(output, `generated.${extension}`, mimeType);
   }, [output, outputType]);
 
+  const activeHeaderCount = headers.filter((h) => h.enabled && h.key.trim()).length;
+
   return (
     <MainLayout>
       <ToolLayout
         title="JSON Code Generator"
-        description="Fetch JSON from URL and generate TypeScript interfaces or JavaScript code"
+        description="Fetch JSON from URL with custom headers (like Postman) and generate TypeScript or JavaScript code"
         toolbar={
           <div className="flex flex-col gap-3">
-            {/* URL Fetch Row */}
+            {/* URL and Method Row */}
             <div className="flex flex-wrap items-center gap-2">
+              <Select value={method} onValueChange={(v) => setMethod(v as HttpMethod)}>
+                <SelectTrigger className="w-24 h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GET">GET</SelectItem>
+                  <SelectItem value="POST">POST</SelectItem>
+                  <SelectItem value="PUT">PUT</SelectItem>
+                  <SelectItem value="PATCH">PATCH</SelectItem>
+                  <SelectItem value="DELETE">DELETE</SelectItem>
+                </SelectContent>
+              </Select>
+
               <div className="flex-1 min-w-[200px]">
                 <Input
                   type="url"
@@ -164,10 +226,11 @@ export default function CodeGeneratorPage() {
                   }}
                 />
               </div>
+
               <Button
                 onClick={handleFetchUrl}
                 disabled={isFetching}
-                variant="outline"
+                variant="default"
                 size="sm"
                 className="gap-2"
               >
@@ -176,9 +239,47 @@ export default function CodeGeneratorPage() {
                 ) : (
                   <Globe className="h-4 w-4" />
                 )}
-                Fetch URL
+                Send
+              </Button>
+
+              <Button
+                onClick={() => setCurlDialogOpen(true)}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <Terminal className="h-4 w-4" />
+                Paste cURL
               </Button>
             </div>
+
+            {/* Headers Section (Collapsible) */}
+            <Collapsible open={headersOpen} onOpenChange={setHeadersOpen}>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between h-8 px-2 text-sm font-normal"
+                >
+                  <span className="flex items-center gap-2">
+                    Headers
+                    {activeHeaderCount > 0 && (
+                      <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                        {activeHeaderCount}
+                      </span>
+                    )}
+                  </span>
+                  {headersOpen ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <HeadersEditor headers={headers} onChange={setHeaders} />
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Generation Actions Row */}
             <div className="flex flex-wrap items-center gap-2">
@@ -244,6 +345,12 @@ export default function CodeGeneratorPage() {
             </div>
           </div>
         }
+      />
+
+      <CurlPasteDialog
+        open={curlDialogOpen}
+        onOpenChange={setCurlDialogOpen}
+        onImport={handleCurlImport}
       />
     </MainLayout>
   );
