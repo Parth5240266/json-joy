@@ -36,6 +36,16 @@ export async function fetchJsonFromUrl(
       ...headers,
     };
 
+    // Auto-add Content-Type for requests with body if not already set
+    if (body && method !== 'GET') {
+      const hasContentType = Object.keys(requestHeaders).some(
+        key => key.toLowerCase() === 'content-type'
+      );
+      if (!hasContentType) {
+        requestHeaders['Content-Type'] = 'application/json';
+      }
+    }
+
     const fetchOptions: RequestInit = {
       method,
       headers: requestHeaders,
