@@ -61,7 +61,7 @@ export default function CodeGeneratorPage() {
   const [bodyOpen, setBodyOpen] = useState(false);
   const [requestBody, setRequestBody] = useState('');
 
-  const showBodyEditor = method !== 'GET' && method !== 'DELETE';
+  const showBodyEditor = method !== 'GET';
 
   const debouncedInput = useDebounce(input, 300);
 
