@@ -24,8 +24,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FileType, Code, Globe, Loader2, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileType, Code, Globe, Loader2, Terminal, ChevronDown, ChevronUp, FileJson } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Textarea } from '@/components/ui/textarea';
 
 const SAMPLE_JSON = `{
   "id": 1,
@@ -57,6 +58,10 @@ export default function CodeGeneratorPage() {
   const [interfaceName, setInterfaceName] = useState('Root');
   const [curlDialogOpen, setCurlDialogOpen] = useState(false);
   const [headersOpen, setHeadersOpen] = useState(false);
+  const [bodyOpen, setBodyOpen] = useState(false);
+  const [requestBody, setRequestBody] = useState('');
+
+  const showBodyEditor = method !== 'GET' && method !== 'DELETE';
 
   const debouncedInput = useDebounce(input, 300);
 
@@ -92,6 +97,12 @@ export default function CodeGeneratorPage() {
     if (newHeaders.length > 0) {
       setHeadersOpen(true);
     }
+
+    // Set body if present
+    if (parsed.body) {
+      setRequestBody(parsed.body);
+      setBodyOpen(true);
+    }
   }, []);
 
   const handleFetchUrl = useCallback(async () => {
@@ -115,6 +126,7 @@ export default function CodeGeneratorPage() {
       const result = await fetchJsonFromUrl(url, {
         method,
         headers: requestHeaders,
+        body: showBodyEditor ? requestBody : undefined,
       });
 
       if (result.success && result.data) {
@@ -280,6 +292,45 @@ export default function CodeGeneratorPage() {
                 <HeadersEditor headers={headers} onChange={setHeaders} />
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Request Body Section (Collapsible, only for POST/PUT/PATCH) */}
+            {showBodyEditor && (
+              <Collapsible open={bodyOpen} onOpenChange={setBodyOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-between h-8 px-2 text-sm font-normal"
+                  >
+                    <span className="flex items-center gap-2">
+                      <FileJson className="h-4 w-4" />
+                      Request Body
+                      {requestBody.trim() && (
+                        <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full">
+                          JSON
+                        </span>
+                      )}
+                    </span>
+                    {bodyOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <Textarea
+                    value={requestBody}
+                    onChange={(e) => setRequestBody(e.target.value)}
+                    placeholder='{"key": "value"}'
+                    className="font-mono text-sm min-h-[120px] resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter JSON payload for your {method} request
+                  </p>
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Generation Actions Row */}
             <div className="flex flex-wrap items-center gap-2">
