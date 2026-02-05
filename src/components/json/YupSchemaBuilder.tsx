@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { ChevronRight, ChevronDown, Type, Plus, X } from 'lucide-react';
+import { ChevronRight, ChevronDown, Type, Plus, X, Hash, ToggleLeft, Calendar, List, Braces, AlignLeft, Mail, Link2, ShieldCheck, ArrowUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   FieldNode,
@@ -26,7 +26,96 @@ interface YupSchemaBuilderProps {
   onNodeChange: (updated: FieldNode) => void;
 }
 
-function ValidationEditor({
+// Type icons mapping
+const typeIcons: Record<string, React.ReactNode> = {
+  string: <AlignLeft className="h-3 w-3" />,
+  number: <Hash className="h-3 w-3" />,
+  boolean: <ToggleLeft className="h-3 w-3" />,
+  date: <Calendar className="h-3 w-3" />,
+  array: <List className="h-3 w-3" />,
+  object: <Braces className="h-3 w-3" />,
+};
+
+// Type colors mapping
+const typeColors: Record<string, string> = {
+  string: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+  number: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30',
+  boolean: 'bg-violet-500/15 text-violet-600 dark:text-violet-400 border-violet-500/30',
+  date: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+  array: 'bg-pink-500/15 text-pink-600 dark:text-pink-400 border-pink-500/30',
+  object: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
+};
+
+// Validation chip component
+function ValidationChip({
+  label,
+  onRemove,
+  children,
+  variant = 'default',
+}: {
+  label: string;
+  onRemove: () => void;
+  children?: React.ReactNode;
+  variant?: 'default' | 'required' | 'constraint';
+}) {
+  const variantStyles = {
+    default: 'bg-secondary/80 hover:bg-secondary text-secondary-foreground border-border/50',
+    required: 'bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/30',
+    constraint: 'bg-primary/10 hover:bg-primary/15 text-primary border-primary/30',
+  };
+
+  return (
+    <div
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border transition-all duration-200 animate-scale-in',
+        variantStyles[variant]
+      )}
+    >
+      {children ? (
+        <>
+          <span className="text-muted-foreground">{label}</span>
+          {children}
+        </>
+      ) : (
+        <span>{label}</span>
+      )}
+      <button
+        onClick={onRemove}
+        className="ml-0.5 hover:bg-foreground/10 rounded-full p-0.5 transition-colors"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+// Number input for validation values
+function ValidationInput({
+  type = 'number',
+  value,
+  onChange,
+  className,
+}: {
+  type?: 'number' | 'date';
+  value: string | number;
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  return (
+    <Input
+      type={type}
+      className={cn(
+        'h-6 text-xs px-2 py-0 border-0 bg-background/60 rounded font-mono focus:ring-1 focus:ring-primary/50',
+        type === 'number' ? 'w-14' : 'w-28',
+        className
+      )}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  );
+}
+
+function ValidationEditorNew({
   path,
   kind,
   validations,
@@ -178,101 +267,77 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'string') n.validations.v.required = false;
+                })
+              }
+            />
           )}
           {v.minLength !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">min:</span>
-              <Input
-                type="number"
-                className="h-5 w-12 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="min:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'string') n.validations.v.minLength = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.minLength}
-                onChange={(e) => {
-                  const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                onChange={(val) => {
+                  const parsed = val ? parseInt(val, 10) : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.minLength = val;
+                    if (n.validations.kind === 'string') n.validations.v.minLength = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.minLength = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.maxLength !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">max:</span>
-              <Input
-                type="number"
-                className="h-5 w-12 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="max:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'string') n.validations.v.maxLength = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.maxLength}
-                onChange={(e) => {
-                  const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                onChange={(val) => {
+                  const parsed = val ? parseInt(val, 10) : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.maxLength = val;
+                    if (n.validations.kind === 'string') n.validations.v.maxLength = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.maxLength = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.email && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Email</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.email = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Email"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'string') n.validations.v.email = false;
+                })
+              }
+            />
           )}
           {v.url && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>URL</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'string') n.validations.v.url = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="URL"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'string') n.validations.v.url = false;
+                })
+              }
+            />
           )}
         </>
       );
@@ -282,122 +347,91 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') n.validations.v.required = false;
+                })
+              }
+            />
           )}
           {v.min !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">min:</span>
-              <Input
-                type="number"
-                className="h-5 w-14 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="min:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') n.validations.v.min = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.min}
-                onChange={(e) => {
-                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                onChange={(val) => {
+                  const parsed = val === '' ? undefined : parseFloat(val);
                   onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.min = val;
+                    if (n.validations.kind === 'number') n.validations.v.min = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.min = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.max !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">max:</span>
-              <Input
-                type="number"
-                className="h-5 w-14 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="max:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') n.validations.v.max = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.max}
-                onChange={(e) => {
-                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                onChange={(val) => {
+                  const parsed = val === '' ? undefined : parseFloat(val);
                   onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.max = val;
+                    if (n.validations.kind === 'number') n.validations.v.max = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.max = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.integer && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Integer</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') n.validations.v.integer = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Integer"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') n.validations.v.integer = false;
+                })
+              }
+            />
           )}
           {v.positive && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Positive</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') {
-                      n.validations.v.positive = false;
-                      if (n.validations.v.negative) n.validations.v.negative = false;
-                    }
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Positive"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') {
+                    n.validations.v.positive = false;
+                  }
+                })
+              }
+            />
           )}
           {v.negative && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Negative</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'number') {
-                      n.validations.v.negative = false;
-                      if (n.validations.v.positive) n.validations.v.positive = false;
-                    }
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Negative"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'number') {
+                    n.validations.v.negative = false;
+                  }
+                })
+              }
+            />
           )}
         </>
       );
@@ -407,19 +441,15 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'boolean') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'boolean') n.validations.v.required = false;
+                })
+              }
+            />
           )}
         </>
       );
@@ -429,71 +459,57 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'array') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'array') n.validations.v.required = false;
+                })
+              }
+            />
           )}
           {v.min !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">min:</span>
-              <Input
-                type="number"
-                className="h-5 w-12 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="min:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'array') n.validations.v.min = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.min}
-                onChange={(e) => {
-                  const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                onChange={(val) => {
+                  const parsed = val ? parseInt(val, 10) : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'array') n.validations.v.min = val;
+                    if (n.validations.kind === 'array') n.validations.v.min = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'array') n.validations.v.min = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.max !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">max:</span>
-              <Input
-                type="number"
-                className="h-5 w-12 text-[11px] px-1 py-0 border-0 bg-background/50"
+            <ValidationChip
+              label="max:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'array') n.validations.v.max = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 value={v.max}
-                onChange={(e) => {
-                  const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                onChange={(val) => {
+                  const parsed = val ? parseInt(val, 10) : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'array') n.validations.v.max = val;
+                    if (n.validations.kind === 'array') n.validations.v.max = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'array') n.validations.v.max = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
         </>
       );
@@ -503,19 +519,15 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'object') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'object') n.validations.v.required = false;
+                })
+              }
+            />
           )}
         </>
       );
@@ -525,71 +537,59 @@ function ValidationEditor({
       return (
         <>
           {v.required && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span>Required</span>
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'date') n.validations.v.required = false;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            <ValidationChip
+              label="Required"
+              variant="required"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'date') n.validations.v.required = false;
+                })
+              }
+            />
           )}
           {v.min !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">min:</span>
-              <Input
+            <ValidationChip
+              label="after:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'date') n.validations.v.min = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 type="date"
-                className="h-5 w-28 text-[11px] px-1 py-0 border-0 bg-background/50"
                 value={v.min ? new Date(v.min).toISOString().slice(0, 10) : ''}
-                onChange={(e) => {
-                  const val = e.target.value ? new Date(e.target.value + 'T00:00:00Z').toISOString() : undefined;
+                onChange={(val) => {
+                  const parsed = val ? new Date(val + 'T00:00:00Z').toISOString() : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'date') n.validations.v.min = val;
+                    if (n.validations.kind === 'date') n.validations.v.min = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'date') n.validations.v.min = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
           {v.max !== undefined && (
-            <div className="inline-flex items-center gap-1 bg-muted/60 hover:bg-muted px-1.5 py-0.5 rounded text-[11px]">
-              <span className="text-muted-foreground">max:</span>
-              <Input
+            <ValidationChip
+              label="before:"
+              variant="constraint"
+              onRemove={() =>
+                onUpdate((n) => {
+                  if (n.validations.kind === 'date') n.validations.v.max = undefined;
+                })
+              }
+            >
+              <ValidationInput
                 type="date"
-                className="h-5 w-28 text-[11px] px-1 py-0 border-0 bg-background/50"
                 value={v.max ? new Date(v.max).toISOString().slice(0, 10) : ''}
-                onChange={(e) => {
-                  const val = e.target.value ? new Date(e.target.value + 'T00:00:00Z').toISOString() : undefined;
+                onChange={(val) => {
+                  const parsed = val ? new Date(val + 'T00:00:00Z').toISOString() : undefined;
                   onUpdate((n) => {
-                    if (n.validations.kind === 'date') n.validations.v.max = val;
+                    if (n.validations.kind === 'date') n.validations.v.max = parsed;
                   });
                 }}
               />
-              <button
-                onClick={() =>
-                  onUpdate((n) => {
-                    if (n.validations.kind === 'date') n.validations.v.max = undefined;
-                  })
-                }
-                className="hover:bg-destructive/20 rounded p-0.5 -mr-0.5"
-              >
-                <X className="h-2.5 w-2.5" />
-              </button>
-            </div>
+            </ValidationChip>
           )}
         </>
       );
@@ -602,9 +602,7 @@ function ValidationEditor({
   if (!configured) return null;
 
   return (
-    <>
-      {renderConfiguredValidations()}
-    </>
+    <div className="flex flex-wrap gap-1.5">{renderConfiguredValidations()}</div>
   );
 }
 
@@ -620,17 +618,33 @@ function AddValidationButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
-          <Plus className="h-3 w-3" />
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-6 w-6 p-0 rounded-full hover:bg-primary/10 hover:text-primary transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-48">
+      <DropdownMenuContent align="start" className="w-48 p-1">
         {availableOptions.map((option) => (
           <DropdownMenuItem
             key={option.key}
             onClick={() => onAdd(option.key)}
-            className="cursor-pointer"
+            className="cursor-pointer rounded-md"
           >
+            {option.key === 'required' && <ShieldCheck className="h-3.5 w-3.5 mr-2 text-destructive" />}
+            {(option.key === 'min' || option.key === 'max' || option.key === 'minLength' || option.key === 'maxLength') && (
+              <ArrowUpDown className="h-3.5 w-3.5 mr-2 text-primary" />
+            )}
+            {option.key === 'email' && <Mail className="h-3.5 w-3.5 mr-2 text-muted-foreground" />}
+            {option.key === 'url' && <Link2 className="h-3.5 w-3.5 mr-2 text-muted-foreground" />}
+            {option.key === 'integer' && <Hash className="h-3.5 w-3.5 mr-2 text-muted-foreground" />}
+            {(option.key === 'positive' || option.key === 'negative') && (
+              <span className="h-3.5 w-3.5 mr-2 text-xs font-mono text-muted-foreground flex items-center justify-center">
+                {option.key === 'positive' ? '+' : '−'}
+              </span>
+            )}
             {option.label}
           </DropdownMenuItem>
         ))}
@@ -777,45 +791,64 @@ function FieldTreeNode({
   const kindLabel = node.kind === 'date' ? 'string (date)' : node.kind;
 
   return (
-    <div className="py-1">
+    <div className="py-0.5 group/node">
       <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div
+          className={cn(
+            'flex items-start gap-2 py-2 px-2 -mx-2 rounded-lg transition-colors',
+            'hover:bg-muted/40'
+          )}
+        >
           <CollapsibleTrigger asChild>
             <button
               type="button"
               className={cn(
-                'flex items-center gap-1 rounded px-1 -ml-1 hover:bg-secondary/50 text-left min-w-0',
-                hasChildren && 'cursor-pointer'
+                'flex items-center gap-2 text-left min-w-0 shrink-0',
+                hasChildren && 'cursor-pointer',
+                !hasChildren && 'cursor-default'
               )}
             >
               {hasChildren ? (
                 open ? (
-                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
                 ) : (
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform" />
                 )
               ) : (
                 <span className="w-4 shrink-0" />
               )}
-              <span className="font-medium text-foreground truncate">{displayKey}</span>
-              <span className="text-muted-foreground text-xs shrink-0">({kindLabel})</span>
+              <span className="font-semibold text-foreground truncate">{displayKey}</span>
             </button>
           </CollapsibleTrigger>
-          <ValidationEditor
-            path={path}
-            kind={node.kind}
-            validations={node.validations}
-            onUpdate={handleUpdate}
-          />
-          <AddValidationButton
-            availableOptions={availableOptions}
-            onAdd={handleAddValidation}
-          />
+          
+          <Badge
+            variant="outline"
+            className={cn(
+              'shrink-0 text-[10px] font-medium px-1.5 py-0 h-5 gap-1 border',
+              typeColors[node.kind] || 'bg-muted text-muted-foreground border-border'
+            )}
+          >
+            {typeIcons[node.kind]}
+            {kindLabel}
+          </Badge>
+
+          <div className="flex-1 flex flex-wrap items-center gap-1.5 min-w-0">
+            <ValidationEditorNew
+              path={path}
+              kind={node.kind}
+              validations={node.validations}
+              onUpdate={handleUpdate}
+            />
+            <AddValidationButton
+              availableOptions={availableOptions}
+              onAdd={handleAddValidation}
+            />
+          </div>
         </div>
-        <CollapsibleContent>
+        <CollapsibleContent className="animate-accordion-down">
           {node.kind === 'object' &&
             node.children?.map((child) => (
-              <div key={child.key} className="ml-4 border-l border-border/50 pl-2">
+              <div key={child.key} className="ml-6 border-l-2 border-border/40 pl-3">
                 <FieldTreeNode
                   node={child}
                   path={path ? `${path}.${child.key}` : child.key}
@@ -826,7 +859,7 @@ function FieldTreeNode({
               </div>
             ))}
           {node.kind === 'array' && node.itemSchema && typeof node.itemSchema === 'object' && (
-            <div className="ml-4 border-l border-border/50 pl-2">
+            <div className="ml-6 border-l-2 border-border/40 pl-3">
               <FieldTreeNode
                 node={node.itemSchema as FieldNode}
                 path={path ? `${path}.item` : 'item'}
@@ -845,19 +878,27 @@ function FieldTreeNode({
 export function YupSchemaBuilder({ node, onNodeChange }: YupSchemaBuilderProps) {
   if (!node) {
     return (
-      <div className="p-4 text-sm text-muted-foreground rounded-lg border border-border bg-card">
-        Paste or upload JSON to analyze and build a Yup schema.
+      <div className="p-6 text-center rounded-xl border-2 border-dashed border-border bg-muted/20">
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-3">
+          <Type className="h-6 w-6 text-primary" />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Paste or upload JSON to analyze and build a Yup schema.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 overflow-auto max-h-full">
-      <div className="flex items-center gap-2 mb-3 text-sm font-medium text-foreground">
-        <Type className="h-4 w-4" />
-        Fields & validations
+    <div className="rounded-xl border border-border bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
+        <div className="p-1.5 rounded-md bg-primary/10">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+        </div>
+        <span className="text-sm font-semibold text-foreground">Fields & Validations</span>
+        <span className="text-xs text-muted-foreground ml-auto">Click + to add rules</span>
       </div>
-      <div className="space-y-0.5">
+      <div className="p-3 overflow-auto max-h-[calc(100%-52px)]">
         <FieldTreeNode
           node={node}
           path=""
@@ -869,3 +910,4 @@ export function YupSchemaBuilder({ node, onNodeChange }: YupSchemaBuilderProps) 
     </div>
   );
 }
+
