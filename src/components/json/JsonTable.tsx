@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -7,14 +7,29 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { isSensitiveKey } from '@/lib/json-utils';
 
 interface JsonTableProps {
   data: unknown[];
+  onPaginationChange?: (info: { currentPage: number; totalPages: number; totalRows: number }) => void;
 }
 
-export function JsonTable({ data }: JsonTableProps) {
+const ROWS_PER_PAGE_OPTIONS = [10, 25, 50, 100];
+
+export function JsonTable({ data, onPaginationChange }: JsonTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const { headers, rows } = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) {
       return { headers: [], rows: [] };
@@ -35,6 +50,34 @@ export function JsonTable({ data }: JsonTableProps) {
 
     return { headers, rows };
   }, [data]);
+
+  // Pagination calculations
+  const totalRows = rows.length;
+  const totalPages = Math.ceil(totalRows / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const endIndex = Math.min(startIndex + rowsPerPage, totalRows);
+  const paginatedRows = rows.slice(startIndex, endIndex);
+
+  // Reset to page 1 when data or rowsPerPage changes
+  useMemo(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  // Notify parent of pagination changes
+  useMemo(() => {
+    onPaginationChange?.({ currentPage, totalPages, totalRows });
+  }, [currentPage, totalPages, totalRows, onPaginationChange]);
+
+  const handleRowsPerPageChange = (value: string) => {
+    setRowsPerPage(Number(value));
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
 
   if (headers.length === 0) {
     return (
@@ -63,46 +106,127 @@ export function JsonTable({ data }: JsonTableProps) {
   };
 
   return (
-    <div className="h-full overflow-auto scrollbar-thin rounded-lg border border-border">
-      <Table>
-        <TableHeader className="sticky top-0 bg-secondary/80 backdrop-blur-sm">
-          <TableRow>
-            <TableHead className="w-12 text-center font-mono text-xs">#</TableHead>
-            {headers.map((header) => (
-              <TableHead
-                key={header}
-                className={cn(
-                  'font-mono text-xs whitespace-nowrap',
-                  isSensitiveKey(header) && 'sensitive-highlight'
-                )}
-              >
-                {header}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {rows.map((row, index) => (
-            <TableRow key={index} className="hover:bg-secondary/30">
-              <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                {index + 1}
-              </TableCell>
-              {headers.map((header) => (
-                <TableCell
-                  key={header}
-                  className={cn(
-                    'font-mono text-xs max-w-[300px] truncate',
-                    getValueClass(row[header], header)
-                  )}
-                  title={formatValue(row[header])}
-                >
-                  {formatValue(row[header])}
-                </TableCell>
+    <div className="h-full flex flex-col">
+      {/* Table with horizontal and vertical scroll */}
+      <div className="flex-1 min-h-0 overflow-auto scrollbar-thin rounded-lg border border-border">
+        <div className="min-w-max">
+          <Table>
+            <TableHeader className="sticky top-0 z-10 bg-secondary/95 backdrop-blur-sm">
+              <TableRow>
+                <TableHead className="w-12 text-center font-mono text-xs sticky left-0 z-20 bg-secondary/95">
+                  #
+                </TableHead>
+                {headers.map((header) => (
+                  <TableHead
+                    key={header}
+                    className={cn(
+                      'font-mono text-xs whitespace-nowrap',
+                      isSensitiveKey(header) && 'sensitive-highlight'
+                    )}
+                  >
+                    {header}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRows.map((row, index) => (
+                <TableRow key={startIndex + index} className="hover:bg-secondary/30">
+                  <TableCell className="text-center font-mono text-xs text-muted-foreground sticky left-0 bg-background/95">
+                    {startIndex + index + 1}
+                  </TableCell>
+                  {headers.map((header) => (
+                    <TableCell
+                      key={header}
+                      className={cn(
+                        'font-mono text-xs max-w-[300px] truncate',
+                        getValueClass(row[header], header)
+                      )}
+                      title={formatValue(row[header])}
+                    >
+                      {formatValue(row[header])}
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Pagination Controls */}
+      {totalRows > 0 && (
+        <div className="flex items-center justify-between gap-4 px-4 py-3 border-t border-border bg-secondary/30 rounded-b-lg">
+          {/* Rows per page selector */}
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground whitespace-nowrap">Rows per page:</span>
+            <Select value={String(rowsPerPage)} onValueChange={handleRowsPerPageChange}>
+              <SelectTrigger className="w-[70px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROWS_PER_PAGE_OPTIONS.map((option) => (
+                  <SelectItem key={option} value={String(option)}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Page info */}
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
+            Showing {startIndex + 1}-{endIndex} of {totalRows}
+          </div>
+
+          {/* Navigation buttons */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => goToPage(1)}
+              disabled={currentPage === 1}
+              title="First page"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => goToPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm text-muted-foreground px-2 whitespace-nowrap">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => goToPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              title="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => goToPage(totalPages)}
+              disabled={currentPage === totalPages}
+              title="Last page"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
