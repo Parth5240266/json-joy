@@ -1,41 +1,86 @@
 
-# Auto-Format on Indentation Change
+# JSON Table Pagination and Scrolling
 
-## Problem
-Currently, when clicking on the "2" or "4" indentation buttons in the Formatter page, the selection changes but the JSON output doesn't update automatically. Users have to click the "Format" button again to see the change.
+## Overview
+Enhance the JSON Table component with pagination controls and improved scrolling to handle large datasets efficiently.
 
-## Solution
-Add an effect that automatically re-formats the JSON whenever the indentation setting changes, providing instant feedback.
+## Features to Add
+
+### 1. Pagination
+- Show 10 rows per page by default
+- Page selector dropdown to change rows per page (10, 25, 50, 100)
+- Previous/Next navigation buttons
+- Page number display ("Page 1 of 5")
+- Jump to first/last page buttons
+
+### 2. Scrolling Improvements
+- Horizontal scroll for tables with many columns
+- Vertical scroll within the table area (already exists but will be refined)
+- Sticky header that stays visible during vertical scroll
+- Sticky row numbers column for horizontal scroll
 
 ---
 
 ## Technical Implementation
 
-### File: `src/pages/FormatterPage.tsx`
+### File: `src/components/json/JsonTable.tsx`
 
-**Add a new `useEffect` hook** that watches the `indentation` value and automatically triggers formatting when it changes:
+**Add State Management:**
+- `currentPage` state to track which page is displayed
+- `rowsPerPage` state with default of 10
+- Calculate `totalPages` from data length
 
+**Pagination Logic:**
 ```text
-useEffect(() => {
-  // Only auto-format if there's already output (user has formatted before)
-  // and the input is valid JSON
-  if (output && input.trim()) {
-    try {
-      const formatted = formatJSON(input, indentation);
-      setOutput(formatted);
-      const size = calculateSize(input, formatted);
-      setSizeInfo(`Original: ${formatBytes(size.original)} → Formatted: ${formatBytes(size.processed)}`);
-    } catch (e) {
-      // Silently ignore - user will see validation error
-    }
-  }
-}, [indentation]);
+const startIndex = (currentPage - 1) * rowsPerPage;
+const endIndex = startIndex + rowsPerPage;
+const paginatedRows = rows.slice(startIndex, endIndex);
 ```
 
-**Logic:**
-1. When `indentation` changes (user clicks "2" or "4")
-2. Check if there's existing output (meaning user has already formatted once)
-3. If yes, re-format the current input with the new indentation
-4. Update the output and size info immediately
+**UI Updates:**
+1. Wrap table in a container with `overflow-x-auto` for horizontal scroll
+2. Add pagination controls bar below the table with:
+   - Rows per page dropdown (10, 25, 50, 100)
+   - Current page info ("Showing 1-10 of 150")
+   - Previous/Next buttons
+   - Page number buttons with ellipsis for large page counts
 
-This provides instant visual feedback without requiring an extra click.
+**Imports to Add:**
+- `useState` from React
+- `Select, SelectContent, SelectItem, SelectTrigger, SelectValue` for rows-per-page dropdown
+- `Button` for navigation buttons
+- `ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight` icons
+
+### Visual Layout
+
+```text
++----------------------------------------------------------+
+|  #  |  Column 1  |  Column 2  |  Column 3  |  ...        | <- Sticky Header
++----------------------------------------------------------+
+|  1  |  Data      |  Data      |  Data      |             |
+|  2  |  Data      |  Data      |  Data      |             |
+| ... |  ...       |  ...       |  ...       |             |
+| 10  |  Data      |  Data      |  Data      |             |
++----------------------------------------------------------+
+|  Rows per page: [10 v]    Showing 1-10 of 150   [<] [>]  | <- Pagination Bar
++----------------------------------------------------------+
+```
+
+### File: `src/pages/TablePage.tsx`
+
+**Update Status Bar:**
+- Show pagination info instead of just row count
+- Display "Page X of Y (Z total rows)"
+
+---
+
+## Component Structure
+
+The updated JsonTable will have:
+1. **Table container** with both horizontal and vertical overflow
+2. **Sticky header row** that remains fixed during scroll
+3. **Pagination footer** with:
+   - Rows per page selector
+   - "Showing X-Y of Z" info text
+   - First/Previous/Next/Last navigation buttons
+   - Optional: Page number buttons for quick jumping
