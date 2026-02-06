@@ -22,6 +22,7 @@ export default function TablePage() {
   const [tableData, setTableData] = useState<unknown[]>([]);
   const [copySuccess, setCopySuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paginationInfo, setPaginationInfo] = useState<{ currentPage: number; totalPages: number; totalRows: number } | null>(null);
 
   const debouncedInput = useDebounce(input, 300);
 
@@ -63,6 +64,10 @@ export default function TablePage() {
     }
   }, [input]);
 
+  const handlePaginationChange = useCallback((info: { currentPage: number; totalPages: number; totalRows: number }) => {
+    setPaginationInfo(info);
+  }, []);
+
   return (
     <MainLayout>
       <ToolLayout
@@ -90,7 +95,7 @@ export default function TablePage() {
             )}
             <div className="flex-1 min-h-0 mt-2">
               {tableData.length > 0 ? (
-                <JsonTable data={tableData} />
+                <JsonTable data={tableData} onPaginationChange={handlePaginationChange} />
               ) : !error && (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
                   Enter an array of objects to see the table
@@ -99,7 +104,11 @@ export default function TablePage() {
             </div>
           </div>
         }
-        statusBar={tableData.length > 0 && <span>{tableData.length} rows</span>}
+        statusBar={
+          paginationInfo && paginationInfo.totalRows > 0 && (
+            <span>Page {paginationInfo.currentPage} of {paginationInfo.totalPages} ({paginationInfo.totalRows} total rows)</span>
+          )
+        }
       />
     </MainLayout>
   );
