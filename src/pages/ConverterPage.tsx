@@ -24,7 +24,6 @@ const SAMPLE_JSON = `[
   { "id": 3, "name": "Tool", "price": 19.99, "category": "Hardware" }
 ]`;
 
-type ConversionType = 'csv' | 'xml';
 type ConversionType = 'csv' | 'xml' | 'json' | 'toml';
 
 const outputLanguageByType: Record<ConversionType, 'json' | 'plaintext'> = {
