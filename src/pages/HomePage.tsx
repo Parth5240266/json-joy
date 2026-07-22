@@ -56,7 +56,7 @@ const tools = [
   {
     path: '/converter',
     label: 'JSON Converter',
-    description: 'Convert JSON to CSV or XML format for easy data exchange',
+    description: 'Convert JSON to CSV, XML, TOML, or CSV back to JSON',
     icon: FileCode,
     gradient: 'from-indigo-500 to-purple-500',
   },

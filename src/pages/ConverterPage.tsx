@@ -6,7 +6,9 @@ import { Toolbar, ToolbarButton } from '@/components/json/Toolbar';
 import { StatusMessage } from '@/components/json/StatusMessage';
 import { useTheme } from '@/hooks/use-theme';
 import {
+  csvToJSON,
   jsonToCSV,
+  jsonToTOML,
   jsonToXML,
   validateJSON,
   copyToClipboard,
@@ -14,7 +16,7 @@ import {
   formatBytes,
   calculateSize,
 } from '@/lib/json-utils';
-import { FileSpreadsheet, FileCode } from 'lucide-react';
+import { Braces, FileCode, FileJson, FileSpreadsheet } from 'lucide-react';
 
 const SAMPLE_JSON = `[
   { "id": 1, "name": "Widget", "price": 29.99, "category": "Electronics" },
@@ -23,6 +25,14 @@ const SAMPLE_JSON = `[
 ]`;
 
 type ConversionType = 'csv' | 'xml';
+type ConversionType = 'csv' | 'xml' | 'json' | 'toml';
+
+const outputLanguageByType: Record<ConversionType, 'json' | 'plaintext'> = {
+  csv: 'plaintext',
+  xml: 'plaintext',
+  json: 'json',
+  toml: 'plaintext',
+};
 
 export default function ConverterPage() {
   const { theme } = useTheme();
@@ -77,6 +87,43 @@ export default function ConverterPage() {
     }
   }, [input]);
 
+  const handleConvertCsvToJSON = useCallback(() => {
+    try {
+      const json = csvToJSON(input);
+      setOutput(json);
+      setConversionType('json');
+      setError(null);
+      const size = calculateSize(input, json);
+      setSizeInfo(`CSV: ${formatBytes(size.original)} → JSON: ${formatBytes(size.processed)}`);
+    } catch (e) {
+      const err = e as Error;
+      setError(err.message);
+      setOutput('');
+    }
+  }, [input]);
+
+  const handleConvertToTOML = useCallback(() => {
+    const validation = validateJSON(input);
+    if (!validation.valid) {
+      setError(validation.error?.message || 'Invalid JSON');
+      setOutput('');
+      return;
+    }
+
+    try {
+      const toml = jsonToTOML(input);
+      setOutput(toml);
+      setConversionType('toml');
+      setError(null);
+      const size = calculateSize(input, toml);
+      setSizeInfo(`JSON: ${formatBytes(size.original)} → TOML: ${formatBytes(size.processed)}`);
+    } catch (e) {
+      const err = e as Error;
+      setError(err.message);
+      setOutput('');
+    }
+  }, [input]);
+
   const handleCopy = useCallback(async () => {
     const textToCopy = output || input;
     const success = await copyToClipboard(textToCopy);
@@ -88,8 +135,14 @@ export default function ConverterPage() {
 
   const handleDownload = useCallback(() => {
     if (!output) return;
-    const extension = conversionType === 'csv' ? 'csv' : 'xml';
-    const mimeType = conversionType === 'csv' ? 'text/csv' : 'application/xml';
+    const extension = conversionType ?? 'txt';
+    const mimeTypeByType: Record<ConversionType, string> = {
+      csv: 'text/csv',
+      xml: 'application/xml',
+      json: 'application/json',
+      toml: 'application/toml',
+    };
+    const mimeType = conversionType ? mimeTypeByType[conversionType] : 'text/plain';
     downloadFile(output, `converted.${extension}`, mimeType);
   }, [output, conversionType]);
 
@@ -97,7 +150,7 @@ export default function ConverterPage() {
     <MainLayout>
       <ToolLayout
         title="JSON Converter"
-        description="Convert JSON to CSV or XML format"
+        description="Convert JSON to CSV, XML, TOML, or turn CSV back into JSON"
         toolbar={
           <div className="flex flex-wrap items-center gap-2">
             <ToolbarButton
@@ -111,6 +164,17 @@ export default function ConverterPage() {
               icon={<FileCode className="h-4 w-4" />}
               label="To XML"
               variant="primary"
+            />
+            <ToolbarButton
+              onClick={handleConvertToTOML}
+              icon={<FileJson className="h-4 w-4" />}
+              label="To TOML"
+              variant="primary"
+            />
+            <ToolbarButton
+              onClick={handleConvertCsvToJSON}
+              icon={<Braces className="h-4 w-4" />}
+              label="CSV to JSON"
             />
             <div className="flex-1" />
             <Toolbar
@@ -146,6 +210,7 @@ export default function ConverterPage() {
                 value={output}
                 readOnly
                 theme={theme}
+                language={conversionType ? outputLanguageByType[conversionType] : 'json'}
                 height="100%"
               />
             </div>

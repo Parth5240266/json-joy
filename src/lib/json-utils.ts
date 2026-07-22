@@ -123,6 +123,142 @@ export function jsonToCSV(input: string): string {
   return csvRows.join('\n');
 }
 
+function parseCSVLine(line: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && inQuotes && nextChar === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function parseCSVValue(value: string): unknown {
+  const trimmed = value.trim();
+
+  if (trimmed === '') return '';
+  if (trimmed.toLowerCase() === 'true') return true;
+  if (trimmed.toLowerCase() === 'false') return false;
+  if (trimmed.toLowerCase() === 'null') return null;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return trimmed;
+    }
+  }
+
+  return trimmed;
+}
+
+export function csvToJSON(input: string, spaces: number = 2): string {
+  const rows = input
+    .split(/\r?\n/)
+    .map(row => row.trim())
+    .filter(Boolean);
+
+  if (rows.length === 0) {
+    throw new Error('CSV input is empty');
+  }
+
+  const headers = parseCSVLine(rows[0]).map(header => header.trim());
+
+  if (headers.length === 0 || headers.some(header => !header)) {
+    throw new Error('CSV must include a valid header row');
+  }
+
+  const data = rows.slice(1).map(row => {
+    const values = parseCSVLine(row);
+    return headers.reduce<Record<string, unknown>>((record, header, index) => {
+      record[header] = parseCSVValue(values[index] ?? '');
+      return record;
+    }, {});
+  });
+
+  return JSON.stringify(data, null, spaces);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function formatTomlValue(value: unknown): string {
+  if (value === null || value === undefined) return '""';
+  if (typeof value === 'string') return JSON.stringify(value);
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(item => formatTomlValue(item)).join(', ')}]`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function toTomlSection(obj: Record<string, unknown>, prefix: string = ''): string[] {
+  const lines: string[] = [];
+  const nested: Array<[string, Record<string, unknown>]> = [];
+
+  for (const [key, value] of Object.entries(obj)) {
+    const safeKey = /^[A-Za-z0-9_-]+$/.test(key) ? key : JSON.stringify(key);
+
+    if (isPlainObject(value)) {
+      nested.push([prefix ? `${prefix}.${safeKey}` : safeKey, value]);
+    } else {
+      lines.push(`${safeKey} = ${formatTomlValue(value)}`);
+    }
+  }
+
+  for (const [section, value] of nested) {
+    if (lines.length > 0) lines.push('');
+    lines.push(`[${section}]`);
+    lines.push(...toTomlSection(value, section));
+  }
+
+  return lines;
+}
+
+export function jsonToTOML(input: string): string {
+  const data = JSON.parse(input);
+
+  if (Array.isArray(data)) {
+    return data
+      .map((item, index) => {
+        if (!isPlainObject(item)) {
+          return `[[items]]\nvalue = ${formatTomlValue(item)}`;
+        }
+
+        return `[[items]]\n${toTomlSection(item).join('\n')}`;
+      })
+      .join('\n\n');
+  }
+
+  if (!isPlainObject(data)) {
+    throw new Error('JSON must be an object or array to convert to TOML');
+  }
+
+  return toTomlSection(data).join('\n');
+}
+
 export function jsonToXML(input: string, rootName: string = 'root'): string {
   const data = JSON.parse(input);
   
