@@ -9,7 +9,7 @@ interface JsonEditorProps {
   height?: string;
   theme?: 'light' | 'dark';
   placeholder?: string;
-  language?: 'json' | 'typescript' | 'javascript';
+  language?: 'json' | 'typescript' | 'javascript' | 'plaintext';
 }
 
 export function JsonEditor({

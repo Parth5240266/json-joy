@@ -46,9 +46,9 @@ const ROUTES: Record<string, Omit<SeoConfig, 'path'>> = {
       'Convert array-based JSON into a clean, responsive table for easy viewing and analysis.',
   },
   '/converter': {
-    title: 'JSON Converter (CSV / XML) | JSONJoy',
+    title: 'JSON Converter (CSV, XML, TOML) | JSONJoy',
     description:
-      'Convert JSON to CSV or XML for data exchange. Quick, simple, and client-side.',
+      'Convert JSON to CSV, XML, TOML, and CSV back to JSON. Quick, simple, and client-side.',
   },
   '/code-generator': {
     title: 'JSON Code Generator | JSONJoy',
