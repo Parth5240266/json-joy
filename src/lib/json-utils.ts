@@ -259,6 +259,142 @@ export function jsonToTOML(input: string): string {
   return toTomlSection(data).join('\n');
 }
 
+// ---------- JSON → TOON (Token-Oriented Object Notation) ----------
+// Compact, LLM-friendly format. Spec highlights:
+//   key: value                        // scalar
+//   key[N]: v1,v2,v3                  // array of primitives
+//   key[N]{f1,f2}:                    // tabular array of uniform objects
+//     v1,v2
+//   key:                              // nested object
+//     child: ...
+function toonNeedsQuote(str: string): boolean {
+  if (str === '') return true;
+  if (/^[\s]|[\s]$/.test(str)) return true;
+  if (/[,:\[\]{}"\n\r#]/.test(str)) return true;
+  if (/^(true|false|null)$/i.test(str)) return true;
+  if (/^-?\d+(\.\d+)?$/.test(str)) return true;
+  return false;
+}
+
+function toonScalar(value: unknown): string {
+  if (value === null || value === undefined) return 'null';
+  if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+  if (typeof value === 'string') {
+    return toonNeedsQuote(value) ? JSON.stringify(value) : value;
+  }
+  return JSON.stringify(value);
+}
+
+function toonKey(key: string): string {
+  return /^[A-Za-z_][A-Za-z0-9_-]*$/.test(key) ? key : JSON.stringify(key);
+}
+
+function isPrimitive(v: unknown): boolean {
+  return v === null || ['string', 'number', 'boolean'].includes(typeof v);
+}
+
+function uniformObjectFields(arr: unknown[]): string[] | null {
+  if (arr.length === 0) return null;
+  if (!arr.every(isPlainObject)) return null;
+  const first = arr[0] as Record<string, unknown>;
+  const fields = Object.keys(first);
+  if (fields.length === 0) return null;
+  for (const item of arr) {
+    const obj = item as Record<string, unknown>;
+    const keys = Object.keys(obj);
+    if (keys.length !== fields.length) return null;
+    for (const f of fields) {
+      if (!(f in obj)) return null;
+      if (!isPrimitive(obj[f])) return null;
+    }
+  }
+  return fields;
+}
+
+function toonRender(value: unknown, indent: number): string[] {
+  const pad = '  '.repeat(indent);
+  const lines: string[] = [];
+
+  if (Array.isArray(value)) {
+    // Handled by caller with a key; top-level array:
+    lines.push(...toonArrayInline('items', value, indent));
+    return lines;
+  }
+
+  if (!isPlainObject(value)) {
+    lines.push(`${pad}${toonScalar(value)}`);
+    return lines;
+  }
+
+  for (const [k, v] of Object.entries(value)) {
+    const key = toonKey(k);
+    if (Array.isArray(v)) {
+      lines.push(...toonArrayInline(key, v, indent));
+    } else if (isPlainObject(v)) {
+      if (Object.keys(v).length === 0) {
+        lines.push(`${pad}${key}: {}`);
+      } else {
+        lines.push(`${pad}${key}:`);
+        lines.push(...toonRender(v, indent + 1));
+      }
+    } else {
+      lines.push(`${pad}${key}: ${toonScalar(v)}`);
+    }
+  }
+  return lines;
+}
+
+function toonArrayInline(key: string, arr: unknown[], indent: number): string[] {
+  const pad = '  '.repeat(indent);
+  const inner = '  '.repeat(indent + 1);
+  const lines: string[] = [];
+
+  if (arr.length === 0) {
+    lines.push(`${pad}${key}[0]:`);
+    return lines;
+  }
+
+  if (arr.every(isPrimitive)) {
+    lines.push(`${pad}${key}[${arr.length}]: ${arr.map(toonScalar).join(',')}`);
+    return lines;
+  }
+
+  const fields = uniformObjectFields(arr);
+  if (fields) {
+    lines.push(`${pad}${key}[${arr.length}]{${fields.map(toonKey).join(',')}}:`);
+    for (const item of arr) {
+      const row = fields.map(f => toonScalar((item as Record<string, unknown>)[f]));
+      lines.push(`${inner}${row.join(',')}`);
+    }
+    return lines;
+  }
+
+  // Heterogeneous array — fall back to indexed items
+  lines.push(`${pad}${key}[${arr.length}]:`);
+  for (const item of arr) {
+    if (isPlainObject(item)) {
+      lines.push(`${inner}-`);
+      lines.push(...toonRender(item, indent + 2));
+    } else if (Array.isArray(item)) {
+      lines.push(...toonArrayInline('-', item, indent + 1));
+    } else {
+      lines.push(`${inner}- ${toonScalar(item)}`);
+    }
+  }
+  return lines;
+}
+
+export function jsonToTOON(input: string): string {
+  const data = JSON.parse(input);
+  if (Array.isArray(data)) {
+    return toonArrayInline('items', data, 0).join('\n');
+  }
+  if (isPlainObject(data)) {
+    return toonRender(data, 0).join('\n');
+  }
+  return toonScalar(data);
+}
+
 export function jsonToXML(input: string, rootName: string = 'root'): string {
   const data = JSON.parse(input);
   

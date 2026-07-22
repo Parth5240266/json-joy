@@ -9,6 +9,7 @@ import {
   csvToJSON,
   jsonToCSV,
   jsonToTOML,
+  jsonToTOON,
   jsonToXML,
   validateJSON,
   copyToClipboard,
@@ -16,7 +17,7 @@ import {
   formatBytes,
   calculateSize,
 } from '@/lib/json-utils';
-import { Braces, FileCode, FileJson, FileSpreadsheet } from 'lucide-react';
+import { Braces, FileCode, FileJson, FileSpreadsheet, Sparkles } from 'lucide-react';
 
 const SAMPLE_JSON = `[
   { "id": 1, "name": "Widget", "price": 29.99, "category": "Electronics" },
@@ -24,13 +25,14 @@ const SAMPLE_JSON = `[
   { "id": 3, "name": "Tool", "price": 19.99, "category": "Hardware" }
 ]`;
 
-type ConversionType = 'csv' | 'xml' | 'json' | 'toml';
+type ConversionType = 'csv' | 'xml' | 'json' | 'toml' | 'toon';
 
 const outputLanguageByType: Record<ConversionType, 'json' | 'plaintext'> = {
   csv: 'plaintext',
   xml: 'plaintext',
   json: 'json',
   toml: 'plaintext',
+  toon: 'plaintext',
 };
 
 export default function ConverterPage() {
@@ -123,6 +125,28 @@ export default function ConverterPage() {
     }
   }, [input]);
 
+  const handleConvertToTOON = useCallback(() => {
+    const validation = validateJSON(input);
+    if (!validation.valid) {
+      setError(validation.error?.message || 'Invalid JSON');
+      setOutput('');
+      return;
+    }
+
+    try {
+      const toon = jsonToTOON(input);
+      setOutput(toon);
+      setConversionType('toon');
+      setError(null);
+      const size = calculateSize(input, toon);
+      setSizeInfo(`JSON: ${formatBytes(size.original)} → TOON: ${formatBytes(size.processed)}`);
+    } catch (e) {
+      const err = e as Error;
+      setError(err.message);
+      setOutput('');
+    }
+  }, [input]);
+
   const handleCopy = useCallback(async () => {
     const textToCopy = output || input;
     const success = await copyToClipboard(textToCopy);
@@ -140,6 +164,7 @@ export default function ConverterPage() {
       xml: 'application/xml',
       json: 'application/json',
       toml: 'application/toml',
+      toon: 'text/plain',
     };
     const mimeType = conversionType ? mimeTypeByType[conversionType] : 'text/plain';
     downloadFile(output, `converted.${extension}`, mimeType);
@@ -149,7 +174,7 @@ export default function ConverterPage() {
     <MainLayout>
       <ToolLayout
         title="JSON Converter"
-        description="Convert JSON to CSV, XML, TOML, or turn CSV back into JSON"
+        description="Convert JSON to CSV, XML, TOML, TOON, or turn CSV back into JSON"
         toolbar={
           <div className="flex flex-wrap items-center gap-2">
             <ToolbarButton
@@ -168,6 +193,12 @@ export default function ConverterPage() {
               onClick={handleConvertToTOML}
               icon={<FileJson className="h-4 w-4" />}
               label="To TOML"
+              variant="primary"
+            />
+            <ToolbarButton
+              onClick={handleConvertToTOON}
+              icon={<Sparkles className="h-4 w-4" />}
+              label="To TOON"
               variant="primary"
             />
             <ToolbarButton
