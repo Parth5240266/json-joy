@@ -174,7 +174,7 @@ export default function ConverterPage() {
     <MainLayout>
       <ToolLayout
         title="JSON Converter"
-        description="Convert JSON to CSV, XML, TOML, or turn CSV back into JSON"
+        description="Convert JSON to CSV, XML, TOML, TOON, or turn CSV back into JSON"
         toolbar={
           <div className="flex flex-wrap items-center gap-2">
             <ToolbarButton
